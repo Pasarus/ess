@@ -1,6 +1,7 @@
 trigger:
   - demo
 
+parameters:
 - name: conda_channels
   type: object
   default:
