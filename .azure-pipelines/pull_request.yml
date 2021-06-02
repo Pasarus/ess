@@ -25,5 +25,5 @@ stages:
              set -ex
              #echo is master $(is_main)
              echo is target_branch $(target_branch)
-             echo target branch $(System.PullRequest.TargetBranch)
+             #echo target branch $(System.PullRequest.TargetBranch)
 
