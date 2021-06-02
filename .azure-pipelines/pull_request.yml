@@ -1,7 +1,7 @@
 trigger:
   - demo
 
-#variables:
+variables:
 #  is_main: $[eq(variables['System.PullRequest.TargetBranch'], 'main')]
 #  is_next: $[eq(variables['System.PullRequest.TargetBranch'], 'next')]
   target_branch: $[variables['System.PullRequest.TargetBranch']]
