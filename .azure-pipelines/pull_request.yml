@@ -1,10 +1,10 @@
 trigger:
   - demo
 
-variables:
-  is_main: $[eq(variables['System.PullRequest.TargetBranch'], 'main')]
-  is_next: $[eq(variables['System.PullRequest.TargetBranch'], 'next')]
-  target_branch: $[variables['System.PullRequest.TargetBranch']]
+#variables:
+#  is_main: $[eq(variables['System.PullRequest.TargetBranch'], 'main')]
+#  is_next: $[eq(variables['System.PullRequest.TargetBranch'], 'next')]
+#  target_branch: $[variables['System.PullRequest.TargetBranch']]
 
 stages:
   - stage: 'test'
@@ -23,7 +23,7 @@ stages:
             displayName: 'add conda to PATH'
           - bash: |
              set -ex
-             echo is master $(is_main)
-             echo is master $(is_next)
+             #echo is master $(is_main)
+             #echo is master $(is_next)
              echo target branch $(System.PullRequest.TargetBranch)
 
