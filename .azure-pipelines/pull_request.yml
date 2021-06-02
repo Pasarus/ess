@@ -4,7 +4,10 @@ trigger:
       - demo
 
 pr:
-  false
+  autoCancel: true
+  branches:
+    include:
+      - demo 
 
 variables:
   is_main: $[eq(variables['System.PullRequest.TargetBranch'], 'main')]
