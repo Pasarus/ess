@@ -8,15 +8,13 @@ pr:
   branches:
     include:
       - '*'
-    exclude:
-      - next
 
 variables:
-  is_release: $[eq(variables['System.PullRequest.TargetBranch'], 'release')]
+  is_main: $[eq(variables['System.PullRequest.TargetBranch'], 'main')]
+  is_next: $[eq(variables['System.PullRequest.TargetBranch'], 'next')]
   target_branch: $[variables['System.PullRequest.TargetBranch']]
 
 stages:
-  - template: code_quality_checks.yml
   - stage: 'test'
     displayName: 'python tests'
 
@@ -33,26 +31,7 @@ stages:
             displayName: 'add conda to PATH'
           - bash: |
              set -ex
-             echo is master $(is_release)
+             echo is master $(is_main)
+             echo is master $(is_next)
              echo target branch $(System.PullRequest.TargetBranch)
-             # If release use release scipp version from scipp channel, otherwise use scipp/label/dev channel
-             conda config --set always_yes yes --set changeps1 no
-             if [ $(is_release) == False ]; then
-                 conda env create -f ess-stable.yml
-                 source activate ess-stable
-             else
-                 conda env create -f scipp-ess.yml
-                 source activate scipp-ess
-             fi
-             export PYTHONPATH=$PYTHONPATH:src
-             python -m pytest --junitxml=junit/unit-test.xml
-            displayName: 'run pytest'
-          - task: PublishTestResults@2
-            inputs:
-              testResultsFiles: 'junit/*.xml'
-            condition: succeededOrFailed()
 
-  - stage: 'build_documentation'
-    displayName: 'Build documentation'
-    jobs:
-      - template: documentation_build.yml
