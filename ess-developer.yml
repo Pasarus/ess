@@ -1,4 +1,4 @@
-name: ess-developer-stable
+name: ess-developer
 
 channels:
   - conda-forge
@@ -9,6 +9,7 @@ dependencies:
   # Build
   - scippneutron
   - gitpython
+  - scippbuildtools
 
   # Run
   - astropy
