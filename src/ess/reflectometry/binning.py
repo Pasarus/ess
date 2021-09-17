@@ -27,6 +27,7 @@ def q_bin(data, bins):
     """
     if 'qz' in data.events.coords and 'tof' in data.events.coords:
         erase = ['tof'] + data.dims
+        # to_unit now supports binned data
         data.events.coords['qz'] = sc.to_unit(data.events.coords['qz'], bins.unit)
         binned = sc.bin(data, erase=erase, edges=[bins])
         if 'sigma_qz_by_qz' in data.events.coords:
@@ -39,6 +40,7 @@ def q_bin(data, bins):
             binned.coords['sigma_qz_by_qz'] = sc.Variable(values=qzr, dims=['qz'])
     else:
         raise sc.NotFoundError('qz or tof coordinate cannot be found.')
+    # Why are we dividing by the number of events?
     return binned / (data.events.shape[0] * sc.units.dimensionless)
 
 
@@ -50,11 +52,12 @@ def two_dimensional_bin(data, bins):
     :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data, ess.amor.AmorReference.data]
     :param bins: Bin edges
     :type bins: Tuple[scipp._scipp.core.Variable]
-    
+
     :return: Data array binned into given bin edges
     :rtype: scipp._scipp.core.DataArray 
     """
     for i in bins:
+        # to_unit now supports binned data
         data.events.coords[i.dims[0]] = sc.to_unit(data.events.coords[i.dims[0]],
                                                    i.unit)
     return sc.bin(data.bins.concatenate('detector_id'), edges=list(bins))

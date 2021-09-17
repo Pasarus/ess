@@ -45,6 +45,7 @@ class ReflData:
         else:
             self.data_file = data_file
             self.data = data
+        # Setting variances to 1?
         self.data.bins.constituents["data"].variances = np.ones_like(
             self.data.bins.constituents["data"].values)
         self.sample_angle_offset = sample_angle_offset
@@ -87,7 +88,7 @@ class ReflData:
 
         :param bins: wavelength and theta edges
         :type bins: Tuple(scipp._scipp.core.Variable)
-        
+
         :return: Data array binned into wavelength and theta
         :rtype: scipp._scipp.core.DataArray
         """
@@ -140,6 +141,7 @@ class ReflData:
                 self.data.attrs["sample_position"],
             )
             theta = -self.sample_angle_offset + nu_angle
+            # Should just work with .bins
             self.data.bins.constituents["data"].coords["theta"] = theta
             # Check if the beam size on the sample is overilluminating the
             # sample. Using the beam on sample size from the value of theta
