@@ -1,21 +1,10 @@
 from ess.imaging import mantid
+from tests.utils import with_mantid_only
 import tempfile
 import os
 import pytest
 import scipp as sc
 import numpy as np
-
-
-def mantid_is_available():
-    try:
-        import mantid  # noqa: F401
-        return True
-    except ModuleNotFoundError:
-        return False
-
-
-with_mantid_only = pytest.mark.skipif(not mantid_is_available(),
-                                      reason='Mantid framework is unavailable')
 
 
 @pytest.fixture(scope="module")
