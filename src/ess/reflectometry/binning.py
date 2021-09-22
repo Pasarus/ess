@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2021 Scipp contributors (https://github.com/scipp)
-# flake8: noqa: E501
 """
 This module is focused on enabling different binning for reflectometry data.
 """
@@ -9,7 +8,6 @@ This module is focused on enabling different binning for reflectometry data.
 
 import numpy as np
 import scipp as sc
-import scippneutron as scn
 
 
 def q_bin(data, bins):
@@ -17,13 +15,14 @@ def q_bin(data, bins):
     Return data that has been binned in the q-bins passed.
 
     :param data: reflectometry data to be binned
-    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data, ess.amor.AmorReference.data]
-    :param bins: q-bin edges 
-    :type bins: scipp._scipp.core.Variable 
+    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data,
+        ess.amor.AmorReference.data]
+    :param bins: q-bin edges
+    :type bins: `scipp.Variable`
 
     :return: Data array binned into qz with resolution
-    :rtype: scipp._scipp.core.DataArray 
-    :raises: NotFoundError is qz or tof coordinate cannot be found 
+    :rtype: `scipp.DataArray`
+    :raises: NotFoundError is qz or tof coordinate cannot be found
     """
     if 'qz' in data.events.coords and 'tof' in data.events.coords:
         erase = ['tof'] + data.dims
@@ -47,12 +46,13 @@ def two_dimensional_bin(data, bins):
     Perform some arbitrary two-dimensional binning.
 
     :param data: reflectometry data to be binned
-    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data, ess.amor.AmorReference.data]
+    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data,
+        ess.amor.AmorReference.data]
     :param bins: Bin edges
     :type bins: Tuple[scipp._scipp.core.Variable]
-    
+
     :return: Data array binned into given bin edges
-    :rtype: scipp._scipp.core.DataArray 
+    :rtype: scipp._scipp.core.DataArray
     """
     for i in bins:
         data.events.coords[i.dims[0]] = sc.to_unit(data.events.coords[i.dims[0]],
