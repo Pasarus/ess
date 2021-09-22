@@ -8,20 +8,16 @@ This module is focused on enabling different binning for reflectometry data.
 
 import numpy as np
 import scipp as sc
+from typing import Tuple
 
 
-def q_bin(data, bins):
+def q_bin(data: sc.DataArray, bins: sc.Variable) -> sc.DataArray:
     """
     Return data that has been binned in the q-bins passed.
 
     :param data: reflectometry data to be binned
-    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data,
-        ess.amor.AmorReference.data]
     :param bins: q-bin edges
-    :type bins: `scipp.Variable`
-
     :return: Data array binned into qz with resolution
-    :rtype: `scipp.DataArray`
     :raises: NotFoundError is qz or tof coordinate cannot be found
     """
     if 'qz' in data.events.coords and 'tof' in data.events.coords:
@@ -41,18 +37,13 @@ def q_bin(data, bins):
     return binned / (data.events.shape[0] * sc.units.dimensionless)
 
 
-def two_dimensional_bin(data, bins):
+def two_dimensional_bin(data: sc.DataArray, bins: Tuple[sc.Variable]) -> sc.DataArray:
     """
     Perform some arbitrary two-dimensional binning.
 
     :param data: reflectometry data to be binned
-    :type data: Union[ess.reflectometry.ReflData.data, ess.amor.AmorData.data,
-        ess.amor.AmorReference.data]
     :param bins: Bin edges
-    :type bins: Tuple[scipp._scipp.core.Variable]
-
     :return: Data array binned into given bin edges
-    :rtype: scipp._scipp.core.DataArray
     """
     for i in bins:
         data.events.coords[i.dims[0]] = sc.to_unit(data.events.coords[i.dims[0]],

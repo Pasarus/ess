@@ -9,21 +9,18 @@ from scipy.special import erf
 from ess.reflectometry import HDM, G_ACC
 
 
-def angle_with_gravity(data, pixel_position, sample_position):
+def angle_with_gravity(data: sc.DataArray, pixel_position: sc.Variable,
+                       sample_position: sc.Variable) -> sc.Variable:
     """
     Find the angle of reflection when accounting for the presence of gravity.
 
     :param data: Reduction data array.
-    :type data: `scipp.DataArray`
     :param pixel_position: Detector pixel positions, should be a `vector_3_float64`-type
         object.
-    :type pixel_position: `scipp.Variable`
     :param sample_position: Scattered neutron origin position.
-    :type sample_position: `scipp.Variable`
-
     :return: Gravity corrected angle values.
-    :rtype: `scipp.Variable`
     """
+
     # This is a workaround until scipp #1819 is resolved, at which time the following
     # should be used instead
     # velocity = sc.to_unit(HDM / wavelength, 'm/s')
@@ -50,25 +47,18 @@ def angle_with_gravity(data, pixel_position, sample_position):
     return angle
 
 
-def y_dash0(velocity, z_origin, y_origin, z_measured, y_measured):
+def y_dash0(velocity: sc.Variable, z_origin: sc.Variable, y_origin: sc.Variable,
+            z_measured: sc.Variable, y_measured: sc.Variable) -> sc.Variable:
     """
     Evaluation of the first dervative of the kinematic equations for for the trajectory
     of a neutron reflected from a surface.
 
-    Args:
     :param velocity: Neutron velocity.
-    :type velocity: `scipp.Variable`
     :param z_origin: The z-origin position for the reflected neutron.
-    :type z_origin: `scipp.Variable`
     :param y_origin: The y-origin position for the reflected neutron.
-    :type y_origin: `scipp.Variable`
     :param z_measured: The z-measured position for the reflected neutron.
-    :type z_measured: `scipp.Variable`
     :param y_measured: The y-measured position for the reflected neutron.
-    :type y_measured: `scipp.Variable`
-
     :return: The gradient of the trajectory of the neutron at the origin position.
-    :rtype: `scipp.Variable`
     """
     velocity2 = velocity * velocity
     z_diff = z_measured - z_origin
@@ -76,20 +66,16 @@ def y_dash0(velocity, z_origin, y_origin, z_measured, y_measured):
     return -0.5 * sc.norm(G_ACC) * z_diff / velocity2 + y_diff / z_diff
 
 
-def illumination_correction(beam_size, sample_size, theta):
+def illumination_correction(beam_size: sc.Variable, sample_size: sc.Variable,
+                            theta: sc.Variable) -> sc.Variable:
     """
     The factor by which the intensity should be multiplied to account for the
     scattering geometry, where the beam is Gaussian in shape.
 
     :param beam_size: Width of incident beam.
-    :type beam_size: `scipp.Variable`
     :param sample_size: Width of sample in the dimension of the beam.
-    :type sample_size: `scipp.Variable`
     :param theta: Incident angle.
-    :type theta: `scipp.Variable`
-
     :return: Correction factor.
-    :rtype: `scipp.Variable`
     """
     beam_on_sample = beam_size / sc.sin(theta)
     fwhm_to_std = 2 * np.sqrt(2 * np.log(2))
@@ -97,20 +83,16 @@ def illumination_correction(beam_size, sample_size, theta):
     return sc.Variable(values=scale_factor, dims=theta.dims)
 
 
-def illumination_of_sample(beam_size, sample_size, theta):
+def illumination_of_sample(beam_size: sc.Variable, sample_size: sc.Variable,
+                           theta: sc.Variable) -> sc.Variable:
     """
     Determine the illumination of the sample by the beam and therefore the size of this
     illuminated length.
 
     :param beam_size: Width of incident beam, in metres.
-    :type beam_size: `scipp.Variable`
     :param sample_size: Width of sample in the dimension of the beam, in metres.
-    :type sample_size: `scipp.Variable`
     :param theta: Incident angle.
-    :type theta: `scipp.Variable`
-
     :return: The size of the beam, for each theta, on the sample.
-    :rtype: `scipp.Variable`
     """
     beam_on_sample = beam_size / sc.sin(theta)
     if ((sc.mean(beam_on_sample)) > sample_size).value:

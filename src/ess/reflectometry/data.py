@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2021 Scipp contributors (https://github.com/scipp)
-# flake8: noqa: E501
 """
 This is the super-class for raw reflectometry data for reduction.
-From this super-class, instrument specfic sub-classes may be created (see for example the :py:class:`ess.amor.AmorData` class).
+From this super-class, instrument specfic sub-classes may be created
+(see for example the :py:class:`ess.amor.AmorData` class).
 """
 
 # author: Andrew R. McCluskey (arm61)
@@ -12,33 +12,35 @@ import numpy as np
 import scipp as sc
 import scippneutron as scn
 from ess.reflectometry import corrections, resolution, binning, orso, write
+from typing import Union
 
 
 class ReflData:
-    """
-    The general reflectometry data class.
-    This will be used by the instrument specific sub-class for data storage and reduction.
-
-    Args:
-        data (:py:class:`scipp._scipp.core.DataArray` or :py:attr:`str`): The data to be reduced or the path to the file to be reduced.
-        sample_angle_offset (:py:class:`scipp.Variable`, optional): Correction for omega or possibly misalignment of sample. Optional, default :code:`0 degrees of arc`.
-        gravity (:py:attr:`bool`, optional): Should gravity be accounted for. Optional, default :code:`True`.
-        beam_size (:py:class:`scipp._scipp.core.Variable`, optional): Size of the beam perpendicular to the scattering surface. Optional, default :code:`0.001 m`.
-        sample_size (:py:class:`scipp._scipp.core.Variable`, optional): Size of the sample in direction of the beam. Optional, default :code:`0.01 m`.
-        detector_spatial_resolution (:py:class:`scipp._scipp.core.Variable`, optional): Spatial resolution of the detector. Optional, default :code:`2.5 mm`.
-        data_file (:py:attr:`str`): If a :py:class:`scipp._scipp.core.DataArray` is given as the :py:attr:`data`, a :py:attr:`data_file` should be defined for output in the file. Optional, default :code:`None`.
-
-    """
     def __init__(
         self,
-        data,
-        sample_angle_offset=0 * sc.units.deg,
-        gravity=True,
-        beam_size=0.001 * sc.units.m,
-        sample_size=0.01 * sc.units.m,
-        detector_spatial_resolution=0.0025 * sc.units.m,
-        data_file=None,
+        data: Union[sc.DataArray, str],
+        sample_angle_offset: sc.Variable = 0 * sc.units.deg,
+        gravity: bool = True,
+        beam_size: sc.Variable = 0.001 * sc.units.m,
+        sample_size: sc.Variable = 0.01 * sc.units.m,
+        detector_spatial_resolution: sc.Variable = 0.0025 * sc.units.m,
+        data_file: str = None,
     ):
+        """
+        The general reflectometry data class.
+        This will be used by the instrument specific sub-class for data storage and
+        reduction.
+
+        :param data: The data to be reduced or the path to the file to be reduced.
+        :param sample_angle_offset: Correction for omega or possibly misalignment of
+            sample. Optional, default :code:`0 degrees of arc`.
+        :param gravity: Should gravity be accounted for. Optional, default :code:`True`.
+        :param beam_size: Size of the beam perpendicular to the scattering surface. Optional, default :code:`0.001 m`.
+        :param sample_size: Size of the sample in direction of the beam. Optional, default :code:`0.01 m`.
+        :param detector_spatial_resolution: Spatial resolution of the detector. Optional, default :code:`2.5 mm`.
+        :param data_file: If a :py:class:`scipp._scipp.core.DataArray` is given as the :py:attr:`data`, a :py:attr:`data_file` should be defined for output in the file. Optional, default :code:`None`.
+
+        """
         if isinstance(data, str):
             self.data_file = data
             self.data = scn.load_nexus(self.data_file)
@@ -87,7 +89,7 @@ class ReflData:
 
         :param bins: wavelength and theta edges
         :type bins: Tuple(scipp._scipp.core.Variable)
-        
+
         :return: Data array binned into wavelength and theta
         :rtype: scipp._scipp.core.DataArray
         """
