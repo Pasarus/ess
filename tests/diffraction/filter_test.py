@@ -253,12 +253,13 @@ def test_result_of_filter_data_array_on_attribute():
     inside_temp_range = filter_result["slice_data", 1].copy()
     outside_temp_range = filter_result["slice_data", 0].copy()
 
-    inside_temp_range_sum = sc.sum(inside_temp_range.bins.sum())
-    outside_temp_range_sum = sc.sum(outside_temp_range.bins.sum())
+    inside_temp_range_sum = sc.sum(
+        sc.sum(inside_temp_range.astype("float64").bins.sum())).data.value
+    outside_temp_range_sum = sc.sum(
+        sc.sum(outside_temp_range.astype("float64").bins.sum())).data.value
     assert len(inside_temp_range.data) == 10694
     assert len(outside_temp_range.data) == 10694
-    assert inside_temp_range_sum.value == 2779240.5
-    assert outside_temp_range_sum.value == 3555085.75
-    # In the filters it seems to add an extra 4.75 counts because of overlap
-    assert inside_temp_range_sum.value + outside_temp_range_sum.value == \
-           sc.sum(da.bins.sum()).value + 4.75
+    # Caution if not float64 converted before summation, a rounding error of 4.75 will
+    # occur and impact your results, whilst the filter performed fine.
+    assert inside_temp_range_sum + outside_temp_range_sum == \
+           sc.sum(da.astype("float64").bins.sum()).value
