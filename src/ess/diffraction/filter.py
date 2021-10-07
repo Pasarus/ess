@@ -9,49 +9,63 @@ import numpy as np
 
 
 def filter_bad_pulses(da: sc.DataArray,
-                      centre: bool = False,
-                      minimum_threshold: float = .95):
+                      center: bool = False,
+                      minimum_threshold: float = .95,
+                      proton_charge_attribute_name: str = "proton_charge",
+                      proton_charge_time_dim_name: str = "time",
+                      data_time_coord: str = "pulse_time"):
     """
     Filters out any bad pulses based on an attribute named "proton_charge" if the
      "proton_charge" value is less than 95% of the mean (by default, the percentage can
-     be changed using "minimum_threshold") it will be filtered out, if it is 10% higher
-     than the maximum (This won't actually make any difference in comparison to just the
-     max value) based on how Mantid did filtering of bad pulses.
+     be changed using "minimum_threshold") it will be filtered out, if a proton charge
+     is 10% higher than the maximum (This won't actually make any difference in
+     comparison to just the max value) based on how Mantid did filtering of bad pulses.
 
     Args:
         da: sc.DataArray, the data array that is to be filtered.
 
-        centre: bool, whether or not to centre the data of the "proton_charge" as if it
+        center: bool, whether or not to center the data of the "proton_charge" as if it
          were binned, this is done with SNS data.
 
-        minimum_threshold: float, the minimum threshold is a percentage used calculate
-         at what point is determined as a bad proton charge, this value is multiplied by
-         the mean value of the proton_charge data, and that is the minimum by which
-         filtering will occur.
+        minimum_threshold: float, the minimum threshold is a percentage used to
+         calculate the bad proton_charge values. It is used in this equation,
+         (min = mean(data) * minimum_threshold), the min is then used for filtering out
+         what is thought to be bad proton_charge values as a minimum in the filter.
+
+        proton_charge_attribute_name: str, the name of the attribute that contains the
+         proton charge, by default set to "proton_charge".
+
+        proton_charge_time_dim_name: str, the name of the time dimension in the named
+         proton_charge_attribute_name, defaults to "time".
+
+        data_time_coord: str, the name of the time coord in your DataArray, da, defaults
+         to "pulse_time"
 
     Returns:
     A DataArray that contains a dimension called "pulse_slices" in which "good" data in
      slice 1, and "bad" data in slice "0". To access the good data you would slice this
      return result like this: da["pulse_slices", 1].
     """
-    proton_charge = da.attrs['proton_charge'].value
-    proton_charge = proton_charge.rename_dims({'time': 'pulse_time'})
-    proton_charge.coords['pulse_time'] = proton_charge.coords.pop('time')
+    proton_charge = da.attrs[proton_charge_attribute_name].value
+    proton_charge = proton_charge\
+        .rename_dims({proton_charge_time_dim_name: data_time_coord})
+    proton_charge.coords[data_time_coord] = \
+        proton_charge.coords.pop(proton_charge_time_dim_name)
 
-    if centre:
+    if center:
         proton_charge.data.values[:-1] = 0.5 * (proton_charge.data.values[1:] +
                                                 proton_charge.data.values[:-1])
 
     max_charge = sc.max(proton_charge.data)
-    max_charge *= 1.1  # determine true max (max_value * 1.1)
+    max_charge *= 1.1
     min_charge = sc.mean(proton_charge.data)
-    min_charge *= minimum_threshold  # determine true min (mean_value * .01)
+    min_charge *= minimum_threshold
 
     good_pulse = (proton_charge >= min_charge) & (proton_charge < max_charge)
 
     return filter_data_array_on_attribute(da=da,
                                           good_data_lut=good_pulse,
-                                          mapping_coord="pulse_time",
+                                          mapping_coord=data_time_coord,
                                           data_slices_name="pulse_slices")
 
 
@@ -176,7 +190,7 @@ def filter_attribute_by_value(da: sc.DataArray, attribute_name: str,
     # coordinate
     filter_coord_name = _generate_random_string()
     attribute.coords[filter_coord_name] = in_range.data
-    data_in_range = attribute.groupby(filter_coord_name).copy(1)
+    data_in_range = attribute.groupby(filter_coord_name).copy(True)
     del data_in_range.coords[filter_coord_name]
     del attribute.coords[filter_coord_name]
 
@@ -220,7 +234,7 @@ def filter_data_array_on_attribute(da: sc.DataArray,
         'good': good_data_lut.data[mapping_coord, :-1]
     },
                             coords={'edge': edge})
-    good_edges = good_edges.groupby(group='edge').copy(1)
+    good_edges = good_edges.groupby(group='edge').copy(True)
 
     good_data = sc.DataArray(data=good_edges['good'].data
                              ^ good_data_lut[mapping_coord, 0].data,
