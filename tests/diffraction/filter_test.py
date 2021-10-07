@@ -6,7 +6,8 @@ import scippneutron as scn
 
 import pytest
 
-from ess.diffraction.filter import filter_bad_pulses, filter_by_time, filter_attribute_by_time
+from ess.diffraction.filter import filter_bad_pulses, filter_by_time, filter_attribute_by_time, \
+    filter_attribute_by_value, filter_data_array_on_attribute
 
 
 def _test_filter_sums_for_bad_pulses(filtered_da, bad_sum, good_sum):
@@ -161,7 +162,7 @@ def test_result_of_filter_attribute_by_time_variable():
     filter_result_first_half = filter_attribute_by_time(da, "SampleTemp", run_start, run_end)
 
     assert len(filter_result_first_half) == 257
-    np.testing.assert_almost_equal(sc.sum(filter_result_first_half).value, 77123.02212524414)
+    np.testing.assert_almost_equal(sc.sum(filter_result_first_half).value, 77123.0221252)
 
 
 def test_result_of_filter_attribute_by_time_string():
@@ -171,7 +172,7 @@ def test_result_of_filter_attribute_by_time_string():
                                                   da.attrs["end_time"].value)
 
     assert len(filter_result_full) == 465
-    np.testing.assert_almost_equal(sc.sum(filter_result_full).value, 139523.16213989258)
+    np.testing.assert_almost_equal(sc.sum(filter_result_full).value, 139523.1621398)
 
 
 def test_result_of_filter_attribute_by_time_none_default_time():
@@ -185,69 +186,48 @@ def test_result_of_filter_attribute_by_time_none_default_time():
                                                   da.attrs["end_time"].value, time_name=new_dim_time)
 
     assert len(filter_result_full) == 465
-    np.testing.assert_almost_equal(sc.sum(filter_result_full).value, 139523.16213989258)
+    np.testing.assert_almost_equal(sc.sum(filter_result_full).value, 139523.1621398)
 
 
+def test_result_of_filter_attribute_by_value():
+    da = scn.data.tutorial_event_data()
+
+    filter_result = filter_attribute_by_value(da, "SampleTemp", sc.scalar(299.), sc.scalar(300.))
+
+    assert len(filter_result) == 202
+    np.testing.assert_almost_equal(sc.sum(filter_result).value, 60591.3738098)
+    assert sc.min(filter_result.data).value >= 299.
+    assert sc.max(filter_result.data).value <= 300.
+
+    # Assert the cleanup occured, and only time is left in original da, and result.
+    assert len(da.attrs["SampleTemp"].value.coords) == 1
+    assert da.attrs["SampleTemp"].value.coords["time"] is not None
+    assert len(filter_result.coords) == 1
+    assert filter_result.coords["time"] is not None
 
 
-# # Equivalent to ensuring that FilterLogByTime is possible
-# @with_mantid_only
-# def test_result_of_filter_attribute_by_time():
-#     from mantid.simpleapi import FilterLogByTime, Load
-#
-#     filename = "PG3_4866_event.nxs"
-#     ws = Load(filename)
-#     da = scn.from_mantid(ws)
-#
-#     scipp_run_start = sc.scalar(value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-#     scipp_run_end = scipp_run_start + sc.to_unit(
-#         sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64, unit=sc.units.s),
-#         unit="ns")
-#     da_sum = _filter_attribute_by_time(da, "SampleTemp", scipp_run_start, scipp_run_end)
-#     scipp_mean = sc.mean(da_sum.data)
-#
-#     mantid_end = da.attrs["duration"].value * 0.5
-#     mantid_results = FilterLogByTime(InputWorkspace="ws", LogName="SampleTemp", StartTime=0, EndTime=mantid_end)
-#     mantid_mean = np.mean(np.mean(mantid_results))
-#
-#     np.testing.assert_almost_equal(scipp_mean.value, mantid_mean)
-#
-#
-# # Equivalent to ensuring that it's possible to filter a log by value
-# @with_mantid_only
-# def test_result_of_filter_attribute_by_value():
-#     from mantid.simpleapi import Load
-#
-#     filename = "PG3_4866_event.nxs"
-#     ws = Load(filename)
-#     da = scn.from_mantid(ws)
-#
-#     scipp_result = _filter_attribute_by_value(da, "SampleTemp", sc.scalar(299.), sc.scalar(300.))
-#
-#     assert len(scipp_result.data.values) == 467
-#     np.testing.assert_almost_equal(sc.mean(scipp_result.data).value, 299.9960808)
+def test_result_of_filter_data_array_on_attribute():
+    da = scn.data.tutorial_event_data()
 
+    max_temp = sc.scalar(300.)
+    min_temp = sc.scalar(299.)
+    sample_temp = da.attrs["SampleTemp"].value
 
-# Equivalent to ensuring that
+    # Rename sampletemp time dimension so mapping is possible
+    sample_temp = sample_temp.rename_dims({'time': 'pulse_time'})
+    sample_temp.coords['pulse_time'] = sample_temp.coords.pop('time')
 
-# @with_mantid_only
-# def test_result_of_bad_pulse_performance_mantid_comparison():
-#     from mantid.simpleapi import FilterBadPulses
-#
-#     scipp_centre = bench_scipp_filter(filter_bad_pulses, filename="PG3_4866_event.nxs", repeat_times=5, args=True)
-#     scipp_left = bench_scipp_filter(filter_bad_pulses, filename="PG3_4866_event.nxs", repeat_times=5)
-#     mantid_centre = bench_mantid_filter(FilterBadPulses, filename="PG3_4866_event.nxs", repeat_times=5)
-#
-#     average_scipp = (float(scipp_left) + float(scipp_centre)) / 2.
-#
-#     # Assert that Mantid is no more than 3 times faster than the average of a Scipp equivalent operation for filtering
-#     # bad pulses, this is for stability as we expect no more than 2 times as more Scipp operations need to occur.
-#     assert mantid_centre / average_scipp <= 3
+    good_data_lut = (sample_temp >= min_temp) & (sample_temp <= max_temp)
+    filter_result = filter_data_array_on_attribute(da, good_data_lut, "pulse_time")
 
+    inside_temp_range = filter_result["slice_data", 1].copy()
+    outside_temp_range = filter_result["slice_data", 0].copy()
 
-# def _filter_by_time(da, start, end):
-#     edges = sc.concatenate(start, end, 'pulse_time')
-#     return sc.bin(da, edges=[edges])
-
-
-
+    inside_temp_range_sum = sc.sum(inside_temp_range.bins.sum())
+    outside_temp_range_sum = sc.sum(outside_temp_range.bins.sum())
+    assert len(inside_temp_range.data) == 10694
+    assert len(outside_temp_range.data) == 10694
+    assert inside_temp_range_sum.value == 2779240.5
+    assert outside_temp_range_sum.value == 3555085.75
+    # In the filters it seems to add an extra 4.75 counts because of overlap 
+    assert inside_temp_range_sum.value + outside_temp_range_sum.value == sc.sum(da.bins.sum()).value + 4.75

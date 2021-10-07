@@ -3,7 +3,7 @@
 
 import scipp as sc
 import string
-from random import random
+import random
 
 import numpy as np
 
@@ -82,7 +82,6 @@ def filter_by_time(da: sc.DataArray, start, end, time_dim_name: str = "pulse_tim
     return sc.bin(da, edges=[edges])
 
 
-# Example of how you would filter an attribute by time on a given DataArray
 def filter_attribute_by_time(da: sc.DataArray, attribute_name: str, start, end, time_name: str = "time",
                              datetime_unit: str = "ns"):
     """
