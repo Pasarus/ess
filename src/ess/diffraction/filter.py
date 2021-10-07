@@ -8,7 +8,8 @@ import random
 import numpy as np
 
 
-def filter_bad_pulses(da: sc.DataArray, centre: bool = False,
+def filter_bad_pulses(da: sc.DataArray,
+                      centre: bool = False,
                       minimum_threshold: float = .95):
     """
     Filters out any bad pulses based on an attribute named "proton_charge" if the
@@ -48,21 +49,25 @@ def filter_bad_pulses(da: sc.DataArray, centre: bool = False,
 
     good_pulse = (proton_charge >= min_charge) & (proton_charge < max_charge)
 
-    return filter_data_array_on_attribute(da=da, good_data_lut=good_pulse,
+    return filter_data_array_on_attribute(da=da,
+                                          good_data_lut=good_pulse,
                                           mapping_coord="pulse_time",
                                           data_slices_name="pulse_slices")
 
 
 def _input_processing_time_conversion(start, end, datetime_unit):
     if not isinstance(start, sc.Variable):
-        start = sc.scalar(value=np.datetime64(start)
-                          .astype(f"datetime64[{datetime_unit}]"))
+        start = sc.scalar(
+            value=np.datetime64(start).astype(f"datetime64[{datetime_unit}]"))
     if not isinstance(end, sc.Variable):
         end = sc.scalar(value=np.datetime64(end).astype(f"datetime64[{datetime_unit}]"))
     return start, end
 
 
-def filter_by_time(da: sc.DataArray, start, end, time_dim_name: str = "pulse_time",
+def filter_by_time(da: sc.DataArray,
+                   start,
+                   end,
+                   time_dim_name: str = "pulse_time",
                    datetime_unit: str = "ns"):
     """
     Snip out or slice out a part of a DataArray of binned events, based on time, given
@@ -95,8 +100,12 @@ def filter_by_time(da: sc.DataArray, start, end, time_dim_name: str = "pulse_tim
     return sc.bin(da, edges=[edges])
 
 
-def filter_attribute_by_time(da: sc.DataArray, attribute_name: str, start, end,
-                             time_name: str = "time", datetime_unit: str = "ns"):
+def filter_attribute_by_time(da: sc.DataArray,
+                             attribute_name: str,
+                             start,
+                             end,
+                             time_name: str = "time",
+                             datetime_unit: str = "ns"):
     """
     Return all data points between a minimum and maximum time of an attribute in a
      DataArray
@@ -174,7 +183,9 @@ def filter_attribute_by_value(da: sc.DataArray, attribute_name: str,
     return data_in_range
 
 
-def filter_data_array_on_attribute(da: sc.DataArray, good_data_lut, mapping_coord: str,
+def filter_data_array_on_attribute(da: sc.DataArray,
+                                   good_data_lut,
+                                   mapping_coord: str,
                                    data_slices_name: str = "slice_data"):
     """
     Filter the data based on the passed good_data_lut, output the passed DataArray with
@@ -204,14 +215,15 @@ def filter_data_array_on_attribute(da: sc.DataArray, good_data_lut, mapping_coor
     good_data_coord = good_data_lut.coords[mapping_coord]
     edge = good_data_lut.data
     edge = edge[mapping_coord, :-1] ^ edge[mapping_coord, 1:]
-    good_edges = sc.Dataset(
-        data={mapping_coord: good_data_coord[mapping_coord, 1:],
-              'good': good_data_lut.data[mapping_coord, :-1]},
-        coords={'edge': edge})
+    good_edges = sc.Dataset(data={
+        mapping_coord: good_data_coord[mapping_coord, 1:],
+        'good': good_data_lut.data[mapping_coord, :-1]
+    },
+                            coords={'edge': edge})
     good_edges = good_edges.groupby(group='edge').copy(1)
 
-    good_data = sc.DataArray(data=good_edges['good'].data ^ good_data_lut[mapping_coord,
-                                                                          0].data,
+    good_data = sc.DataArray(data=good_edges['good'].data
+                             ^ good_data_lut[mapping_coord, 0].data,
                              coords={mapping_coord: good_edges[mapping_coord].data})
     good_data = sc.concatenate(good_data_lut[mapping_coord, 0], good_data,
                                mapping_coord)

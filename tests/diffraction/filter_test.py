@@ -59,10 +59,9 @@ def test_result_of_filter_by_time_first_half():
     # Run scipp filter by time
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-    run_end = run_start + sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="ns")
+    run_end = run_start + sc.to_unit(sc.scalar(
+        value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64, unit=sc.units.s),
+                                     unit="ns")
     filtered_da = filter_by_time(da.copy(), run_start, run_end)
     da_sum = sc.sum(filtered_da.bins.sum())
 
@@ -75,10 +74,10 @@ def test_result_of_filter_by_time():
     # Run scipp filter by time
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-    half_duration = sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="ns")
+    half_duration = sc.to_unit(sc.scalar(value=da.attrs["duration"].value * 0.5,
+                                         dtype=sc.dtype.int64,
+                                         unit=sc.units.s),
+                               unit="ns")
     run_end = run_start + half_duration
     filtered_da = filter_by_time(da.copy(), run_start, run_end)
     da_sum = sc.sum(filtered_da.bins.sum())
@@ -96,10 +95,10 @@ def test_result_of_filter_by_time_different_event_time_coord():
     # Run scipp filter by time
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-    half_duration = sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="ns")
+    half_duration = sc.to_unit(sc.scalar(value=da.attrs["duration"].value * 0.5,
+                                         dtype=sc.dtype.int64,
+                                         unit=sc.units.s),
+                               unit="ns")
     run_end = run_start + half_duration
     filtered_da = filter_by_time(da.copy(), run_start, run_end, new_dim_name)
     da_sum = sc.sum(filtered_da.bins.sum())
@@ -113,10 +112,10 @@ def test_result_of_filter_by_time_incorrect_event_time_coord():
     # Run scipp filter by time
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-    half_duration = sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="ns")
+    half_duration = sc.to_unit(sc.scalar(value=da.attrs["duration"].value * 0.5,
+                                         dtype=sc.dtype.int64,
+                                         unit=sc.units.s),
+                               unit="ns")
     run_end = run_start + half_duration
     with pytest.raises(sc.core.NotFoundError):
         filter_by_time(da.copy(), run_start, run_end,
@@ -133,10 +132,10 @@ def test_result_of_filter_by_time_different_unit_variable_times():
     # Run scipp filter by time
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[s]"))
-    half_duration = sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="s")
+    half_duration = sc.to_unit(sc.scalar(value=da.attrs["duration"].value * 0.5,
+                                         dtype=sc.dtype.int64,
+                                         unit=sc.units.s),
+                               unit="s")
     run_end = run_start + half_duration
     filtered_da = filter_by_time(da.copy(), run_start, run_end, datetime_unit="s")
     da_sum = sc.sum(filtered_da.bins.sum())
@@ -165,7 +164,9 @@ def test_result_of_filter_by_time_incorrect_unit_string_times():
 
     # Run scipp filter by time
     with pytest.raises(sc.core.UnitError):
-        filter_by_time(da.copy(), "2011-08-12T15:50:17", "2011-08-12T17:22:05",
+        filter_by_time(da.copy(),
+                       "2011-08-12T15:50:17",
+                       "2011-08-12T17:22:05",
                        datetime_unit="s")
 
 
@@ -174,18 +175,18 @@ def test_result_of_filter_attribute_by_time_variable():
 
     run_start = sc.scalar(
         value=np.datetime64(da.attrs["run_start"].value).astype("datetime64[ns]"))
-    half_duration = sc.to_unit(
-        sc.scalar(value=da.attrs["duration"].value * 0.5, dtype=sc.dtype.int64,
-                  unit=sc.units.s),
-        unit="ns")
+    half_duration = sc.to_unit(sc.scalar(value=da.attrs["duration"].value * 0.5,
+                                         dtype=sc.dtype.int64,
+                                         unit=sc.units.s),
+                               unit="ns")
     run_end = run_start + half_duration
 
     filter_result_first_half = filter_attribute_by_time(da, "SampleTemp", run_start,
                                                         run_end)
 
     assert len(filter_result_first_half) == 257
-    np.testing.assert_almost_equal(sc.sum(filter_result_first_half).value,
-                                   77123.0221252)
+    np.testing.assert_almost_equal(
+        sc.sum(filter_result_first_half).value, 77123.0221252)
 
 
 def test_result_of_filter_attribute_by_time_string():
@@ -207,7 +208,8 @@ def test_result_of_filter_attribute_by_time_none_default_time():
     da.attrs["SampleTemp"].value.coords[new_dim_time] = da.attrs[
         "SampleTemp"].value.coords.pop("time")
 
-    filter_result_full = filter_attribute_by_time(da, "SampleTemp",
+    filter_result_full = filter_attribute_by_time(da,
+                                                  "SampleTemp",
                                                   da.attrs["run_start"].value,
                                                   da.attrs["end_time"].value,
                                                   time_name=new_dim_time)
