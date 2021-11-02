@@ -2,13 +2,13 @@
 # Copyright (c) 2021 Scipp contributors (https://github.com/scipp)
 
 import scipp as sc
+import numpy as np
 
 
 def filter_bad_pulses(da: sc.DataArray,
                       proton_charge: sc.DataArray,
-                      center: bool = False,
                       minimum_threshold: float = .95,
-                      maximum_threshold: float = 1.1,
+                      maximum_threshold: float = 1.0,
                       data_time_coord: str = "pulse_time"):
     """
     Filters out any bad pulses based on an attribute named "proton_charge" if the
@@ -19,11 +19,8 @@ def filter_bad_pulses(da: sc.DataArray,
 
     :param da: sc.DataArray, the data array that is to be filtered.
 
-    :param proton_charge: sc.DataArray, the dataarray that contains the proton charges,
+    :param proton_charge: sc.DataArray, the DataArray that contains the proton charges,
      e.g. da.attrs["proton_charge"].value. Expected to have
-
-    :param center: bool, whether or not to center the data of the "proton_charge" as if
-     it were binned, this is done with SNS data.
 
     :param minimum_threshold: float, the minimum threshold is a percentage used to
      calculate the bad proton_charge values. It is used in this equation, (min =
@@ -49,10 +46,6 @@ def filter_bad_pulses(da: sc.DataArray,
     proton_charge.coords[data_time_coord] = \
         proton_charge.coords.pop(proton_charge_time_dim_initial_name)
 
-    if center:
-        proton_charge.data.values[:-1] = 0.5 * (proton_charge.data.values[1:] +
-                                                proton_charge.data.values[:-1])
-
     max_charge = sc.max(proton_charge.data)
     max_charge *= maximum_threshold
     min_charge = sc.mean(proton_charge.data)
@@ -60,9 +53,7 @@ def filter_bad_pulses(da: sc.DataArray,
 
     good_pulse = (proton_charge >= min_charge) & (proton_charge < max_charge)
 
-    return filter_by_attribute_edges(da=da,
-                                     good_data_lut=good_pulse,
-                                     data_slices_name="pulse_slices")
+    return filter(da=da, condition_intervals=good_pulse, dim="pulse_slices")
 
 
 def filter_by_value(da: sc.DataArray, min_value: sc.Variable, max_value: sc.Variable):
@@ -78,70 +69,57 @@ def filter_by_value(da: sc.DataArray, min_value: sc.Variable, max_value: sc.Vari
     :return: sc.DataArray or sc.Variable, whichever the attribute is in the original da
      that is passed.
     """
-    # Define what data is in range
-    greater_than = da >= min_value
-    less_than = da < max_value
-    in_range = greater_than == less_than
-
-    # Group up data based on the in range data that is present and clean up groupby
-    # coordinate
     filter_coord_name = '_'.join(da.coords)
-    da.coords[filter_coord_name] = in_range.data
-    data_in_range = da.groupby(filter_coord_name).copy(True)
+    da.coords[filter_coord_name] = da.data
+    data_in_range = da.groupby(filter_coord_name,
+                               bins=sc.concatenate(min_value, max_value,
+                                                   filter_coord_name)).copy(0)
     del data_in_range.coords[filter_coord_name]
     del da.coords[filter_coord_name]
-
     return data_in_range
 
 
-def _find_edges_based_on_lut(good_data_lut, mapping_coord):
-    good_data_coord = good_data_lut.coords[mapping_coord]
-    edge = good_data_lut.data
+def _find_edges(condition_intervals):
+    mapping_coord = condition_intervals.dims[0]
+    group_data_coord = condition_intervals.coords[mapping_coord]
+    edge = condition_intervals.data
     edge = edge[mapping_coord, :-1] ^ edge[mapping_coord, 1:]
-    good_edges = sc.Dataset(data={
-        mapping_coord: good_data_coord[mapping_coord, 1:],
-        'good': good_data_lut.data[mapping_coord, :-1]
+    edges = sc.Dataset(data={
+        mapping_coord: group_data_coord[mapping_coord, 1:],
+        'good': condition_intervals.data[mapping_coord, :-1]
     },
-                            coords={'edge': edge})
-    return good_edges.groupby(group='edge').copy(True)
+                       coords={'edge': edge})
+    edges = edges.groupby(group='edge').copy(True)
+    data = sc.DataArray(data=edges['good'].data
+                        ^ condition_intervals[mapping_coord, 0].data,
+                        coords={mapping_coord: edges[mapping_coord].data})
+    data = sc.concatenate(condition_intervals[mapping_coord, 0], data, mapping_coord)
+    data = sc.concatenate(data, condition_intervals[mapping_coord, -1], mapping_coord)
+    return data
 
 
-def _find_da_coords_for_slicing(da, good_data_lut):
-    dim = good_data_lut.dims[-1]
-    good_edges = _find_edges_based_on_lut(good_data_lut, dim)
-    good_data = sc.DataArray(data=good_edges['good'].data ^ good_data_lut[dim, 0].data,
-                             coords={dim: good_edges[dim].data})
-    good_data = sc.concatenate(good_data_lut[dim, 0], good_data, dim)
-    good_data = sc.concatenate(good_data, good_data_lut[dim, -1], dim)
-    good_pulse_lut = sc.lookup(good_data, dim)
-
-    return good_pulse_lut[da.bins.coords[dim]]
-
-
-def filter_by_attribute_edges(da: sc.DataArray,
-                              good_data_lut,
-                              data_slices_name: str = "slice_data"):
+def filter(da: sc.DataArray, condition_intervals: sc.DataArray, dim: str):
     """
-    Filter the data based on the passed good_data_lut, output the passed DataArray with
-     a new dimension called the string passed to data_slices_name, where the data in
-     slice 0, is "bad" data and the data in slice 1 is the "good" data.
+    Filter a data array based on passed condition_intervals. Example input:
+     filter(da, ((temp >= min_temp) & (temp < max_temp)), "dim") where temp is the a
+     sc.Variable or sc.DataArray.
 
-    :param da: sc.DataArray, the sc.DataArray that is being filtered
-
-    :param good_data_lut: Any, a definition of what is good data, using the boolean
-      operators on a set of variables. For example this is achieved in
-      "filter_bad_pulses" by (proton_charge >= min_charge) & (proton_charge <
-      max_charge) where proton_charge is the attribute (sc.Variable) being filtered.
-
-    :param data_slices_name: str, The name of the dimension that will be added to the
-      passed sc.DataArray, da, that can then be sliced later for good and bad data.
-
-    :return: The originally passed sc.DataArray, da, with an extra dimension that can
-      then be sliced for good data on slice 1, and sliced for bad data on slice 0. For
-      example, da["slice_data", 1] for good data.
+    :param da: sc.DataArray, the data that is being filtered
+    :param condition_intervals: sc.DataArray, a lookup table for each event time, each
+     event time coordinate should have true or false as the corresponding data of the
+     DataArray, to determine whether or not it should be filtered into slice 0 (False),
+     or 1 (True).
+    :param dim: str, the name of the coordinate, for which the slices will be
+     attributed.
+    :return: The original da, with  slices of given dim, sliced based on the event bands
+     in condition_intervals. Use this to access the results of your filter.
     """
-    da.bins.coords[data_slices_name] = _find_da_coords_for_slicing(da, good_data_lut)
+    edges = _find_edges(condition_intervals)
+    coord_name = edges.dims[-1]
+    da.bins.coords[dim] = sc.lookup(edges, coord_name)[da.bins.coords[coord_name]]
 
-    groups = sc.array(dims=[data_slices_name], values=[False, True])
+    unique_values = np.unique(edges.data.values)
+    groups = sc.array(dims=[dim], values=unique_values)
     grouped = sc.bin(da, groups=[groups])
+
     return grouped
