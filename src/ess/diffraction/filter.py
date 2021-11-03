@@ -8,7 +8,7 @@ import numpy as np
 def filter_bad_pulses(da: sc.DataArray,
                       proton_charge: sc.DataArray,
                       minimum_threshold: float = .95,
-                      maximum_threshold: float = 1.0,
+                      maximum_threshold: float = 1.1,
                       data_time_coord: str = "pulse_time"):
     """
     Filters out any bad pulses based on an attribute named "proton_charge" if the
@@ -40,11 +40,8 @@ def filter_bad_pulses(da: sc.DataArray,
      slice this return result like this: da["pulse_slices", 1].
     """
     # Auto find the time dim name from attribute, assume 1D DataArray
-    proton_charge_time_dim_initial_name = proton_charge.dims[0]
-    proton_charge = proton_charge \
-        .rename_dims({proton_charge_time_dim_initial_name: data_time_coord})
-    proton_charge.coords[data_time_coord] = \
-        proton_charge.coords.pop(proton_charge_time_dim_initial_name)
+    proton_charge = proton_charge.transform_coords(
+        data_time_coord, {data_time_coord: proton_charge.dims[0]}, keep_inputs=False)
 
     max_charge = sc.max(proton_charge.data)
     max_charge *= maximum_threshold
@@ -101,8 +98,8 @@ def _find_edges(condition_intervals):
 def filter(da: sc.DataArray, condition_intervals: sc.DataArray, dim: str):
     """
     Filter a data array based on passed condition_intervals. Example input:
-     filter(da, ((temp >= min_temp) & (temp < max_temp)), "dim") where temp is the a
-     sc.Variable or sc.DataArray.
+     filter(da, ((temp >= min_temp) & (temp < max_temp)), "temperature") where temp is
+     the a sc.Variable or sc.DataArray.
 
     :param da: sc.DataArray, the data that is being filtered
     :param condition_intervals: sc.DataArray, a lookup table for each event time, each
@@ -111,8 +108,9 @@ def filter(da: sc.DataArray, condition_intervals: sc.DataArray, dim: str):
      or 1 (True).
     :param dim: str, the name of the coordinate, for which the slices will be
      attributed.
-    :return: The original da, with  slices of given dim, sliced based on the event bands
-     in condition_intervals. Use this to access the results of your filter.
+    :return: A new DataArray, a copy of the original da, with  slices of given dim,
+     sliced based on the event bands in condition_intervals. Use this to access the
+     results of your filter.
     """
     edges = _find_edges(condition_intervals)
     coord_name = edges.dims[-1]
