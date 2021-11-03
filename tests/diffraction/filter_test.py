@@ -8,8 +8,8 @@ from ess.diffraction.filter import filter_bad_pulses, filter_by_value, filter
 
 
 def _test_filter_sums_for_bad_pulses(filtered_da, bad_sum, good_sum):
-    good_filtered_da = filtered_da["pulse_slices", 1]
-    bad_filtered_da = filtered_da["pulse_slices", 0]
+    good_filtered_da = filtered_da["good_pulse", 1]
+    bad_filtered_da = filtered_da["good_pulse", 0]
     good_da_sum = sc.sum(good_filtered_da.bins.sum()).value
     bad_da_sum = sc.sum(bad_filtered_da.bins.sum()).value
 
@@ -23,7 +23,7 @@ def test_results_of_bad_pulse_defaults():
 
     filtered_da = filter_bad_pulses(da, proton_charge)
 
-    _test_filter_sums_for_bad_pulses(filtered_da, 51821.69921875, 6282503.0)
+    _test_filter_sums_for_bad_pulses(filtered_da, 51799.703125, 6282525.0)
 
 
 def test_results_of_bad_pulse_min_threshold():
@@ -32,7 +32,7 @@ def test_results_of_bad_pulse_min_threshold():
 
     filtered_da = filter_bad_pulses(da, proton_charge, minimum_threshold=.5)
 
-    _test_filter_sums_for_bad_pulses(filtered_da, 23194.6582031, 6311124.5)
+    _test_filter_sums_for_bad_pulses(filtered_da, 23172.65820313, 6311146.5)
 
 
 def test_results_of_bad_pulse_max_threshold():
