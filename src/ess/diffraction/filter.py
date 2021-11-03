@@ -8,7 +8,7 @@ import numpy as np
 def filter_bad_pulses(da: sc.DataArray,
                       proton_charge: sc.DataArray,
                       minimum_threshold: float = .95,
-                      maximum_threshold: float = 1.1,
+                      maximum_threshold: float = 1.0,
                       data_time_coord: str = "pulse_time"):
     """
     Filters out any bad pulses based on an attribute named "proton_charge" if the
@@ -37,7 +37,7 @@ def filter_bad_pulses(da: sc.DataArray,
 
     :return: A DataArray that contains a dimension called "pulse_slices" in which "good"
      data in slice 1, and "bad" data in slice "0". To access the good data you would
-     slice this return result like this: da["pulse_slices", 1].
+     slice this return result like this: da["good_pulse", 1].
     """
     # Auto find the time dim name from attribute, assume 1D DataArray
     proton_charge = proton_charge.transform_coords(
@@ -48,9 +48,9 @@ def filter_bad_pulses(da: sc.DataArray,
     min_charge = sc.mean(proton_charge.data)
     min_charge *= minimum_threshold
 
-    good_pulse = (proton_charge >= min_charge) & (proton_charge < max_charge)
+    good_pulse = (proton_charge >= min_charge) & (proton_charge <= max_charge)
 
-    return filter(da=da, condition_intervals=good_pulse, dim="pulse_slices")
+    return filter(da=da, condition_intervals=good_pulse, dim="good_pulse")
 
 
 def filter_by_value(da: sc.DataArray, min_value: sc.Variable, max_value: sc.Variable):
@@ -120,4 +120,5 @@ def filter(da: sc.DataArray, condition_intervals: sc.DataArray, dim: str):
     groups = sc.array(dims=[dim], values=unique_values)
     grouped = sc.bin(da, groups=[groups])
 
+    del da.bins.coords[dim]
     return grouped
