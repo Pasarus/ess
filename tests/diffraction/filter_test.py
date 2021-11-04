@@ -4,7 +4,7 @@ import numpy as np
 import scipp as sc
 import scippneutron as scn
 
-from ess.diffraction.filter import filter_bad_pulses, filter_by_value, filter
+from ess.diffraction.filter import filter_by_proton_charge, filter_by_value, filter
 
 
 def _test_filter_sums_for_bad_pulses(filtered_da, bad_sum, good_sum):
@@ -21,7 +21,7 @@ def test_results_of_bad_pulse_defaults():
     da = scn.data.tutorial_event_data()
     proton_charge = da.attrs["proton_charge"].value
 
-    filtered_da = filter_bad_pulses(da, proton_charge)
+    filtered_da = filter_by_proton_charge(da, proton_charge)
 
     _test_filter_sums_for_bad_pulses(filtered_da, 51799.703125, 6282525.0)
 
@@ -30,7 +30,7 @@ def test_results_of_bad_pulse_min_threshold():
     da = scn.data.tutorial_event_data()
     proton_charge = da.attrs["proton_charge"].value
 
-    filtered_da = filter_bad_pulses(da, proton_charge, minimum_threshold=.5)
+    filtered_da = filter_by_proton_charge(da, proton_charge, minimum_threshold=.5)
 
     _test_filter_sums_for_bad_pulses(filtered_da, 23172.65820313, 6311146.5)
 
@@ -39,7 +39,7 @@ def test_results_of_bad_pulse_max_threshold():
     da = scn.data.tutorial_event_data()
     proton_charge = da.attrs["proton_charge"].value
 
-    filtered_da = filter_bad_pulses(da, proton_charge, maximum_threshold=.975)
+    filtered_da = filter_by_proton_charge(da, proton_charge, maximum_threshold=.975)
 
     _test_filter_sums_for_bad_pulses(filtered_da, 2562825.75, 3771492.0)
 
@@ -56,7 +56,7 @@ def test_result_of_filter_attribute_by_value():
     assert sc.max(filter_result.data).value <= 300.
 
     # Assert the cleanup occured, and only time is left in original da, and result.
-    assert len(da_to_filter.coords) == 0
+    assert len(da_to_filter.coords) == 1
     assert len(filter_result.coords) == 0
 
 
